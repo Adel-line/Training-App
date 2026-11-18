@@ -123,6 +123,9 @@ test("works offline: logged sets and unlogged drafts survive a reload, then sync
   await squat.getByRole("button", { name: "Increase reps" }).click(); // set 2 draft only: 9 reps, not logged
   await squat.getByRole("button", { name: "Increase reps" }).click(); // 10 reps
 
+  // The screen redraws only after the draft is committed to the phone's storage, so wait for it before reloading.
+  await expect(squat.getByRole("status", { name: "Reps" })).toHaveText("10");
+
   // Reopen offline: full page reload served from the precached shell.
   await page.reload();
   const squat2 = region(page, "Goblet box squat");

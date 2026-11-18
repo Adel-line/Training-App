@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { addDays, localDate } from "@/lib/dates";
 import { isTestWeek, isValidDate, resolveDay, SESSION_LABELS, weekDates } from "@/lib/plan";
-import { finishedWorkouts, getOverrides, getPlanDays } from "@/lib/queries";
+import { activitiesBetween, finishedWorkouts, getOverrides, getPlanDays } from "@/lib/queries";
+import { duration, groupByLocalDate, km, matchDay, pace } from "@/lib/strava/match";
 
 export const metadata: Metadata = { title: "Week" };
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function WeekPage({ searchParams }: PageProps<"/week">) {
   const planDays = getPlanDays();
   const overrides = getOverrides(dates[0], dates[6]);
   const done = finishedWorkouts(dates[0], dates[6]);
+  const byDate = groupByLocalDate(activitiesBetween(dates[0], dates[6]));
 
   return (
     <section className="flex flex-col gap-4">
@@ -41,6 +43,7 @@ export default async function WeekPage({ searchParams }: PageProps<"/week">) {
         {dates.map((date, i) => {
           const day = resolveDay(date, planDays, overrides);
           const finished = done.filter((w) => w.date === date);
+          const { matched, other } = matchDay(day.sessionType, byDate.get(date) ?? []);
           return (
             <li key={date}>
               <Link href={`/week/${date}`}>
@@ -55,6 +58,17 @@ export default async function WeekPage({ searchParams }: PageProps<"/week">) {
                       {day.source === "override" && <span className="ml-2 text-xs text-warn">changed</span>}
                     </p>
                     {day.notes && <p className="text-sm text-muted">{day.notes}</p>}
+                    {matched.map((m) => (
+                      <p key={m.strava_activity_id} className="mt-1 text-sm text-ok" data-testid="matched">
+                        ✓ {m.activity_type} {km(m.distance_m)} · {duration(m.moving_time_s)}
+                        {pace(m.distance_m, m.moving_time_s) && (m.activity_type === "Run" || m.activity_type === "TrailRun") ? ` · ${pace(m.distance_m, m.moving_time_s)}` : ""}
+                      </p>
+                    ))}
+                    {other.map((m) => (
+                      <p key={m.strava_activity_id} className="mt-1 text-sm text-muted" data-testid="other-activity">
+                        Also: {m.activity_type} {km(m.distance_m)} · {duration(m.moving_time_s)}
+                      </p>
+                    ))}
                     {finished.length > 0 && (
                       <p className="mt-1 text-sm text-ok">✓ Completed: {finished.map((w) => SESSION_LABELS[w.session_type as keyof typeof SESSION_LABELS]).join(", ")}</p>
                     )}

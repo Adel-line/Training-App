@@ -11,7 +11,8 @@
     "test": "vitest run",
     "e2e": "playwright test --trace off",
     "icons": "node scripts/generate-icons.mjs",
-    "seed": "node scripts/seed.ts"
+    "seed": "node scripts/seed.ts",
+    "strava:subscribe": "node scripts/strava-subscribe.ts"
   },
   "dependencies": {
     "@serwist/turbopack": "^9.5.15",

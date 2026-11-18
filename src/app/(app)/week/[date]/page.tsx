@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { Card, inputCls, primaryBtn, secondaryBtn } from "@/components/ui";
 import { formatLongDate } from "@/lib/dates";
 import { isStrength, isTestWeek, isValidDate, phaseStatus, resolveDay, SESSION_LABELS, SESSION_TYPES, type SessionType } from "@/lib/plan";
-import { getOverrides, getPhases, getPlanDays, workoutLink, workoutsOn } from "@/lib/queries";
+import { activitiesBetween, getOverrides, getPhases, getPlanDays, workoutLink, workoutsOn } from "@/lib/queries";
+import { duration, groupByLocalDate, km, matchDay, pace } from "@/lib/strava/match";
 import { removeOverride, saveOverride } from "../actions";
 
 export const metadata: Metadata = { title: "Day" };
@@ -15,6 +16,7 @@ export default async function DayPage({ params }: PageProps<"/week/[date]">) {
   if (!isValidDate(date)) notFound();
   const day = resolveDay(date, getPlanDays(), getOverrides(date, date));
   const status = phaseStatus(date, getPhases());
+  const { matched, other } = matchDay(day.sessionType, groupByLocalDate(activitiesBetween(date, date)).get(date) ?? []);
 
   return (
     <section className="flex flex-col gap-4">
@@ -36,6 +38,20 @@ export default async function DayPage({ params }: PageProps<"/week/[date]">) {
         <p className="mt-1 text-xl font-semibold">{day.sessionType ? SESSION_LABELS[day.sessionType] : "Nothing planned"}</p>
         {day.notes && <p className="mt-1 text-muted">{day.notes}</p>}
       </Card>
+
+      {(matched.length > 0 || other.length > 0) && (
+        <Card>
+          <h2 className="mb-2 font-semibold">From Strava</h2>
+          <p className="mb-2 text-xs text-muted">Matched by date and activity type only; this doesn&apos;t check the intervals or intensity.</p>
+          {[...matched.map((m) => ({ m, ok: true })), ...other.map((m) => ({ m, ok: false }))].map(({ m, ok }) => (
+            <p key={m.strava_activity_id} className={ok ? "text-ok" : "text-muted"}>
+              {ok ? "✓ " : "Also: "}
+              {m.name || m.activity_type} · {m.activity_type} {km(m.distance_m)} · {duration(m.moving_time_s)}
+              {(m.activity_type === "Run" || m.activity_type === "TrailRun") && pace(m.distance_m, m.moving_time_s) ? ` · ${pace(m.distance_m, m.moving_time_s)}` : ""}
+            </p>
+          ))}
+        </Card>
+      )}
 
       {day.sessionType && isStrength(day.sessionType) && (
         <Link href={workoutLink(date, day.sessionType).href} prefetch={false} className={primaryBtn}>

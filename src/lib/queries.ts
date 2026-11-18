@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { findOpenWorkout } from "./workouts";
+import type { DayActivity } from "./strava/match";
 import type { Override, Phase, PlanDay } from "./plan";
 
 export const getPlanDays = () => getDb().prepare("SELECT weekday, session_type, notes FROM plan_days ORDER BY weekday").all() as PlanDay[];
@@ -33,3 +34,12 @@ export const workoutsOn = (date: string) =>
   getDb()
     .prepare("SELECT id, session_type, finished_at FROM workouts WHERE date = ? ORDER BY started_at")
     .all(date) as { id: string; session_type: string; finished_at: string | null }[];
+
+/** Strava activities that may fall on dates in [from, to] (padded for the Copenhagen/UTC offset; callers group by local date). */
+export const activitiesBetween = (from: string, to: string) =>
+  getDb()
+    .prepare(
+      `SELECT strava_activity_id, start_date, name, distance_m, moving_time_s, activity_type FROM strava_activities
+       WHERE start_date >= datetime(?, '-1 day') AND start_date < datetime(?, '+2 day') ORDER BY start_date`,
+    )
+    .all(from, to) as unknown as DayActivity[];

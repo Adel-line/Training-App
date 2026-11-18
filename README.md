@@ -4,7 +4,7 @@ Private, phone-first training app for one person (snowboarding, splitboarding, g
 Next.js + SQLite + Tailwind, installed on the phone's home screen as a PWA. It runs on your own computer;
 there is no login, no Supabase and no Vercel. Access is limited by the private network (Tailscale).
 
-Status: **milestone 3 of 8** done: workout logger with offline saving and sync. (M1: PWA shell, M2: database, plan, Today/Week.)
+Status: **milestone 4 of 8** done: Strava import. (M1: PWA shell, M2: database, plan, Today/Week, M3: workout logger.)
 
 ## Requirements
 
@@ -67,6 +67,57 @@ Open a strength day from Today or Week and tap **Start workout**. Every tap is w
 - RIR is never carried from one set to the next; weight and reps are (starting from last time's sets).
 
 The sync endpoints have no login, so they require a JSON content type, which other websites can't send cross-origin.
+
+## Strava
+
+Strava is the only activity source (your Garmin already syncs to it). The app imports Run, TrailRun, Hike and
+Snowboard activities, keeps them in the local database, and matches them to the plan on the Week screen by **date
+and type only** (it doesn't judge intervals or intensity). Only Run and TrailRun feed the running charts.
+
+### Setup
+
+1. Register an app at <https://www.strava.com/settings/api>. **Authorization Callback Domain**: the host of your
+   `APP_URL`, without `https://` (for example `your-computer.your-tailnet.ts.net`). A new app starts in "Single
+   Player Mode" (one athlete: you), which is all this needs. Default limits: 200 requests per 15 min / 2,000 per day
+   overall, 100 / 1,000 for reads; the app respects both.
+2. In `.env.local` set `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_VERIFY_TOKEN` (any random string you make
+   up) and `APP_URL` (the same https address you open the app at). Restart the app.
+3. Settings → **Connect Strava**. You're sent to Strava and back; the last 90 days are imported once per
+   connection (progress shows in Settings). Backfill resumes where it stopped if the app is closed or Strava's
+   rate limit is hit.
+4. **Live updates** (new runs within minutes): Strava has to reach your computer from the internet, but the app itself
+   must stay private. So the app runs a second, tiny listener on `127.0.0.1:3101` (`WEBHOOK_PORT`) that serves only
+   `/api/strava/webhook`. Expose that port, not the app:
+   - Tailscale Funnel: `tailscale funnel --bg --https=8443 3101` (the exact flags and the one-time admin-console
+     switch for Funnel are from memory: I couldn't read Tailscale's docs here, so check `tailscale funnel --help`);
+     the callback URL is then `https://<computer>.<tailnet>.ts.net:8443/api/strava/webhook`.
+   - or a Cloudflare quick tunnel: `cloudflared tunnel --url http://localhost:3101` (the address changes each
+     time, so you'd re-create the subscription).
+5. With the app running and the address reachable, create the subscription (Strava calls your address to validate it
+   first; only one subscription per Strava app is allowed):
+
+   ```bash
+   npm run strava:subscribe -- create https://<your-public-host>/api/strava/webhook
+   npm run strava:subscribe -- view      # show the current subscription
+   npm run strava:subscribe -- delete    # remove it (needed before creating a different one)
+   ```
+
+### How it behaves
+
+- Tokens: access tokens last six hours; they are refreshed when within five minutes of expiring. Strava replaces the
+  refresh token on every refresh, so a database lease makes sure only one refresh happens at a time and both tokens are
+  saved together. Tokens never reach the browser or the logs. They are stored in the SQLite file, so **treat
+  `data/training.db` and its backups as private**.
+- Webhook: events are only validated and written to a job queue (so the reply is far inside Strava's 2-second limit);
+  a worker in the same process fetches the activity right away. Duplicates are ignored. Events for another athlete,
+  or after you disconnect, are acknowledged and ignored. A deleted activity leaves a marker so an older event can't
+  bring it back; an activity changed to an unsupported type is removed from the list.
+- Retries: failures retry with growing delays; a 429 waits for the next 15-minute boundary (or midnight UTC when the
+  daily limit is used) and that time is saved, so it survives restarts. Nothing polls Strava.
+- Disconnect (Settings): revokes access using Strava's `/oauth/revoke` endpoint, removes the tokens, and cancels
+  pending imports. Imported activities stay. If Strava deauthorizes the app, the same cleanup happens automatically.
+- Scope: `read,activity:read_all` (needed for activities set to "Only You"). Strava's API terms ask apps to respect
+  activity privacy; this app is single-user and only shows your own data to you.
 
 ## PWA and offline
 
