@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Change colours / sizes here; components only use the
+ * semantic names (bg-surface, text-muted, bg-accent, ...).
+ * Dark is the default look; a light scheme is used only if the phone asks for it.
+ */
+:root {
+  color-scheme: dark light;
+  --bg: #0b0d10;
+  --surface: #14181d;
+  --surface-2: #1c222a;
+  --line: #2a323c;
+  --fg: #eef1f4;
+  --muted: #98a2b0;
+  --accent: #5eead4;
+  --accent-fg: #04201c;
+  --danger: #f87171;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --tap: 2.75rem; /* 44px minimum touch target */
+  --tabbar-h: 4rem;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef1f4;
+    --line: #d5dbe3;
+    --fg: #12161b;
+    --muted: #566170;
+    --accent: #0f766e;
+    --accent-fg: #ffffff;
+    --danger: #b91c1c;
+    --ok: #15803d;
+    --warn: #b45309;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius-card: 1rem;
+}
+
+@utility tap {
+  min-height: var(--tap);
+  min-width: var(--tap);
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
