@@ -1,97 +1,67 @@
 # Training
 
 Private, phone-first training app for one person (snowboarding, splitboarding, general fitness).
-Next.js (App Router) + Supabase + Tailwind, installable as a PWA, deployed on Vercel.
+Next.js + SQLite + Tailwind, installed on the phone's home screen as a PWA. It runs on your own computer;
+there is no login, no Supabase and no Vercel. Access is limited by the private network (Tailscale).
 
-Status: **milestone 1 of 8** (scaffold, auth, PWA). See the build prompt for the full roadmap.
+Status: **milestone 1 (revised) of 8**: scaffold, local database, PWA shell.
 
-## Environment variables
+## Requirements
 
-Copy `.env.example` to `.env.local` for development; set the same names in Vercel
-(Project → Settings → Environment Variables) for production. Never commit real values.
+- Node.js **22.13 or newer** (uses the built-in `node:sqlite`; it prints an "experimental" notice, which is harmless).
+- A free [Tailscale](https://tailscale.com) account with the app on both your computer and your phone.
 
-| Name | Where it comes from | Needed from |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | M1 |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon / publishable key | M1 |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role key. **Server-only.** | M2 |
-| `ALLOWED_EMAIL` | The one email address allowed to sign in | M1 |
-| `APP_URL` | Public origin, e.g. `https://your-app.vercel.app` (or your tunnel URL in dev). No trailing slash | M1 |
-| `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Strava → Settings → My API Application. Secret is **server-only** | M4 |
-| `STRAVA_VERIFY_TOKEN` | Any random string you choose; used for webhook verification | M4 |
-| `ANTHROPIC_API_KEY` | console.anthropic.com. Optional, server-only, milestone 8 only | M8 |
-
-## Supabase setup (milestone 1)
-
-1. Create a project at supabase.com.
-2. **Authentication → Sign In / Providers → Email**: enable email, keep "Confirm email" on.
-   **Disable new user sign-ups** (Authentication → Sign In / Providers → "Allow new users to sign up" off), then
-   create your own user once (Authentication → Users → Add user → *Send invitation* or *Create new user* with your
-   `ALLOWED_EMAIL`). Without this, anyone could call Supabase's API directly with the public anon key and create
-   accounts; the app's allowlist checks are a second layer, not a substitute.
-3. **Authentication → URL Configuration**: set *Site URL* to your `APP_URL`, and add `APP_URL/**`
-   (plus `http://localhost:3000/**` for development) to *Redirect URLs*.
-4. **Authentication → Email Templates → Magic Link**: replace the link with the token-hash form so the link works
-   even if it opens in a different browser than the installed app (common on iPhone):
-
-   ```html
-   <h2>Sign in</h2>
-   <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Sign in to Training</a></p>
-   ```
-5. Supabase's built-in email sender is rate-limited; that's fine for one user.
-
-### How the allowlist is enforced
-
-- Requesting a link: the server action refuses any address other than `ALLOWED_EMAIL` before Supabase is called.
-- Establishing a session: `/auth/confirm` verifies the token, then signs out and refuses if the user's email isn't allowed.
-- Using a session: `src/proxy.ts` redirects anyone else to `/login`, and every protected page/action calls
-  `requireOwner()`, which re-verifies the user with the Auth server (`getUser()`).
-- Data access is additionally restricted by RLS from milestone 2.
-
-## Local development
+## Run it
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in the values above
-npm run dev                  # http://localhost:3000 (service worker is disabled in dev)
+cp .env.example .env.local     # all values are optional for now
+npm run build
+npm start                      # http://localhost:3000
 ```
 
-Checks:
+Data lives in `data/training.db` (override with `DB_PATH`). Schema changes are SQL files in `migrations/`, applied
+automatically on start. **Back up by copying that one file** while the app is idle.
+
+## Open it on your phone (Tailscale)
+
+A home-screen app needs an https address, and Tailscale provides one privately, only for your own devices:
+
+1. Install Tailscale on the computer and the phone, signed in to the same account.
+2. In the Tailscale admin console, enable **MagicDNS** and **HTTPS Certificates** (DNS page).
+3. On the computer, with the app running: `tailscale serve --bg 3000`.
+   It prints an address like `https://your-computer.your-tailnet.ts.net`.
+4. On the phone (Tailscale on), open that address, then Share / ⋮ → **Add to Home Screen**.
+
+Because only your devices are on your tailnet, no login is needed. **Don't use a public tunnel or Tailscale Funnel
+for the app itself**, since it has no password. (Strava's webhook in milestone 4 will get a narrowly scoped public
+route; we'll cover that then.)
+
+The computer must be on to open pages or sync. Workout logging (milestone 3) keeps data on the phone and syncs later.
+
+## Develop
 
 ```bash
-npm run lint
-npm run typecheck
-npm test            # Vitest unit tests
-CHROMIUM_PATH=/path/to/chrome npm run e2e   # Playwright (builds and serves a production build on :3100)
+npm run dev          # service worker is off in dev
+npm run lint && npm run typecheck && npm test
+CHROMIUM_PATH=/path/to/chrome npm run e2e   # Playwright; needs `npx playwright install chromium` if CHROMIUM_PATH is unset
 ```
 
-`CHROMIUM_PATH` is only needed when Playwright's own browser download isn't installed
-(otherwise run `npx playwright install chromium`). The e2e tests use dummy Supabase values and cover everything
-that doesn't need a live Supabase project: auth gating, allowlist refusal, the manifest, and the offline shell.
-
-For webhook development (milestone 4) expose localhost with `cloudflared tunnel --url http://localhost:3000` or ngrok.
-
-### Regenerating icons
-
-`CHROMIUM_PATH=... npm run icons` re-renders `public/icons/*.png` from the SVG in `scripts/generate-icons.mjs`.
+`CHROMIUM_PATH=... npm run icons` regenerates `public/icons`.
 
 ## PWA and offline
 
-- `src/app/manifest.ts` is the web app manifest; icons live in `public/icons`.
-- The service worker (`src/app/sw.ts`, built by `@serwist/turbopack` and served from `/serwist/sw.js`) precaches the
-  app's static assets and a generic `/~offline` page. Page HTML and RSC data are **never cached** since they are
-  private; if a page can't load offline you get the generic shell. Offline workout data will live in an
-  owner-scoped IndexedDB store (milestone 3) and is cleared on sign-out.
-- Test PWA behaviour on a production build (`npm run build && npm start`); the service worker is off in `next dev`.
-- Install on a phone: open the deployed URL over HTTPS → Share/⋮ menu → *Add to Home Screen*.
+The service worker (`src/app/sw.ts`, served at `/serwist/sw.js`) precaches static assets and a generic `/~offline`
+page. Page HTML and data are never cached; offline workout data will be stored in IndexedDB (milestone 3).
+Test PWA behaviour on a production build.
 
-## Deploying to Vercel
+## Environment variables (`.env.example`)
 
-1. Push the repo to GitHub and import it at vercel.com/new (framework preset: Next.js, defaults are fine).
-2. Add the environment variables above (Production, and Preview if you want preview deploys).
-3. Deploy, then set Supabase *Site URL* / *Redirect URLs* to the Vercel URL and `APP_URL` to the same origin.
-4. Request a sign-in link from the deployed site, open it on your phone, and add the app to the home screen.
+| Name | Purpose | Needed from |
+|---|---|---|
+| `DB_PATH` | SQLite file location (default `data/training.db`) | optional |
+| `APP_URL` | Public/Tailscale origin, used for Strava OAuth callbacks | M4 |
+| `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_VERIFY_TOKEN` | Strava app registration (secret is server-only) | M4 |
+| `ANTHROPIC_API_KEY` | Optional meal-photo analysis, server-only | M8 |
 
-## Training dates
-
-Plan dates, meals, weigh-ins and activity matching use `Europe/Copenhagen` (`src/lib/dates.ts`).
+Dates for plans, meals, weigh-ins and activity matching use `Europe/Copenhagen` (`src/lib/dates.ts`).

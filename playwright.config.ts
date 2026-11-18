@@ -16,14 +16,9 @@ export default defineConfig({
   webServer: {
     // Production build: the service worker is disabled in `next dev`.
     command: `npm run build && npx next start -p ${PORT}`,
-    url: `http://localhost:${PORT}/login`,
+    url: `http://localhost:${PORT}/today`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
-    env: {
-      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
-      ALLOWED_EMAIL: "owner@example.com",
-      APP_URL: `http://localhost:${PORT}`,
-    },
+    env: { DB_PATH: "./data/e2e.db" },
   },
 });
