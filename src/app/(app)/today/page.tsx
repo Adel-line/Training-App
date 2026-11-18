@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, primaryBtn, secondaryBtn } from "@/components";
+import { Card, primaryBtn, secondaryBtn } from "@/components/ui";
 import { formatLongDate, localDate } from "@/lib/dates";
 import { effectiveTarget, isStrength, isTestWeek, phaseStatus, resolveDay, SESSION_LABELS } from "@/lib/plan";
-import { getOverrides, getPhases, getPlanDays, getTargets, proteinOn } from "@/lib/queries";
+import { getOverrides, getPhases, getPlanDays, getTargets, proteinOn, workoutLink } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -78,9 +78,9 @@ export default function TodayPage() {
 
       <div className="grid grid-cols-1 gap-3">
         {day.sessionType && isStrength(day.sessionType) && (
-          <button type="button" disabled className={`${primaryBtn} opacity-50`}>
-            Start workout (coming in milestone 3)
-          </button>
+          <Link href={workoutLink(today, day.sessionType).href} prefetch={false} className={primaryBtn}>
+            {workoutLink(today, day.sessionType).resume ? "Resume workout" : "Start workout"}
+          </Link>
         )}
         <Link href="/food" className={secondaryBtn}>
           Log a meal

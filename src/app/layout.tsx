@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { SyncRunner } from "@/components/sync-runner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,8 +29,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SerwistProvider
           swUrl="/serwist/sw.js"
           disable={process.env.NODE_ENV === "development"}
+          reloadOnOnline={false} // never reload the page under a workout; the sync engine handles reconnects
           options={{ scope: "/" }}
         >
+          <SyncRunner />
           {children}
         </SerwistProvider>
       </body>

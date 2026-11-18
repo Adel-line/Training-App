@@ -28,7 +28,7 @@ test("service worker controls the app and shows the offline shell", async ({ pag
   await page.reload();
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   await context.setOffline(true);
-  await page.goto("/week").catch(() => {});
+  await page.goto("/week", { waitUntil: "commit" });
   await expect(page.getByRole("heading", { name: /you're offline/i })).toBeVisible();
   await context.setOffline(false);
 });

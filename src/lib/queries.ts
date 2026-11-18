@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { findOpenWorkout } from "./workouts";
 import type { Override, Phase, PlanDay } from "./plan";
 
 export const getPlanDays = () => getDb().prepare("SELECT weekday, session_type, notes FROM plan_days ORDER BY weekday").all() as PlanDay[];
@@ -20,3 +21,15 @@ export const finishedWorkouts = (from: string, to: string) =>
   getDb()
     .prepare("SELECT id, date, session_type FROM workouts WHERE date BETWEEN ? AND ? AND finished_at IS NOT NULL ORDER BY date")
     .all(from, to) as { id: string; date: string; session_type: string }[];
+
+/** Link that starts a workout for this date and session, or resumes one already open (never duplicates it). */
+export function workoutLink(date: string, sessionType: string): { href: string; resume: boolean } {
+  const open = findOpenWorkout(getDb(), date, sessionType);
+  const id = open ?? crypto.randomUUID();
+  return { href: `/workout?id=${id}&date=${date}&type=${sessionType}`, resume: Boolean(open) };
+}
+
+export const workoutsOn = (date: string) =>
+  getDb()
+    .prepare("SELECT id, session_type, finished_at FROM workouts WHERE date = ? ORDER BY started_at")
+    .all(date) as { id: string; session_type: string; finished_at: string | null }[];

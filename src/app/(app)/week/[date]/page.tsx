@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, inputCls, primaryBtn, secondaryBtn } from "@/components";
+import { Card, inputCls, primaryBtn, secondaryBtn } from "@/components/ui";
 import { formatLongDate } from "@/lib/dates";
-import { isTestWeek, isValidDate, phaseStatus, resolveDay, SESSION_LABELS, SESSION_TYPES } from "@/lib/plan";
-import { getOverrides, getPhases, getPlanDays } from "@/lib/queries";
+import { isStrength, isTestWeek, isValidDate, phaseStatus, resolveDay, SESSION_LABELS, SESSION_TYPES, type SessionType } from "@/lib/plan";
+import { getOverrides, getPhases, getPlanDays, workoutLink, workoutsOn } from "@/lib/queries";
 import { removeOverride, saveOverride } from "../actions";
 
 export const metadata: Metadata = { title: "Day" };
@@ -36,6 +36,17 @@ export default async function DayPage({ params }: PageProps<"/week/[date]">) {
         <p className="mt-1 text-xl font-semibold">{day.sessionType ? SESSION_LABELS[day.sessionType] : "Nothing planned"}</p>
         {day.notes && <p className="mt-1 text-muted">{day.notes}</p>}
       </Card>
+
+      {day.sessionType && isStrength(day.sessionType) && (
+        <Link href={workoutLink(date, day.sessionType).href} prefetch={false} className={primaryBtn}>
+          {workoutLink(date, day.sessionType).resume ? "Resume workout" : "Start workout"}
+        </Link>
+      )}
+      {workoutsOn(date).filter((w) => w.finished_at).map((w) => (
+        <Link key={w.id} href={`/workout?id=${w.id}`} prefetch={false} className={secondaryBtn}>
+          ✓ {SESSION_LABELS[w.session_type as SessionType]} completed · view
+        </Link>
+      ))}
 
       <Card>
         <h2 className="mb-3 font-semibold">Edit this day</h2>

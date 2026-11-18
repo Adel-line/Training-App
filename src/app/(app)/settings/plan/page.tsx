@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, inputCls, primaryBtn } from "@/components";
+import { Card, inputCls, primaryBtn } from "@/components/ui";
 import { SESSION_LABELS, SESSION_TYPES } from "@/lib/plan";
 import { getPlanDays } from "@/lib/queries";
 import { saveWeeklyPlan } from "./actions";

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { RetryButton } from "./retry-button";
+import { ResumeWorkouts } from "./resume-workouts";
 
 export const metadata: Metadata = { title: "Offline" };
 
@@ -12,6 +13,7 @@ export default function OfflinePage() {
         This page needs a connection. Anything you logged on this device is kept and will sync when
         you&apos;re back online.
       </p>
+      <ResumeWorkouts />
       <RetryButton />
     </main>
   );

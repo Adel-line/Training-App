@@ -4,7 +4,7 @@ Private, phone-first training app for one person (snowboarding, splitboarding, g
 Next.js + SQLite + Tailwind, installed on the phone's home screen as a PWA. It runs on your own computer;
 there is no login, no Supabase and no Vercel. Access is limited by the private network (Tailscale).
 
-Status: **milestone 2 of 8** done: local database, default plan, Today and Week screens. (Milestone 1: PWA shell.)
+Status: **milestone 3 of 8** done: workout logger with offline saving and sync. (M1: PWA shell, M2: database, plan, Today/Week.)
 
 ## Requirements
 
@@ -50,10 +50,29 @@ CHROMIUM_PATH=/path/to/chrome npm run e2e   # Playwright; needs `npx playwright 
 
 `CHROMIUM_PATH=... npm run icons` regenerates `public/icons`.
 
+## Logging workouts (offline-first)
+
+Open a strength day from Today or Week and tap **Start workout**. Every tap is written to the phone's own database
+(IndexedDB) first, then sent to the server in order:
+
+- The sync badge shows **Saved on device** (waiting to send), **Synced**, or **Needs attention** (the server refused a
+  change: tap it to Retry or Discard; the entry stays on your phone until you decide).
+- Sets have fixed IDs built from their position (exercise slot, set number, side), and every edit carries an increasing
+  sequence number. Retries can't duplicate a set, and an older queued edit can never overwrite a newer one (the server
+  keeps the last sequence it applied per set, including deletions).
+- A workout opened once while online reopens offline with its exercises, last time's sets and your unlogged inputs. If
+  the app opens offline it shows **Resume workout** on the offline page.
+- Sync retries when the app opens, comes to the foreground, or connectivity returns, and with backoff after server errors.
+- Swapping an exercise only changes that workout; the template is edited in Settings (milestone 7).
+- RIR is never carried from one set to the next; weight and reps are (starting from last time's sets).
+
+The sync endpoints have no login, so they require a JSON content type, which other websites can't send cross-origin.
+
 ## PWA and offline
 
 The service worker (`src/app/sw.ts`, served at `/serwist/sw.js`) precaches static assets and a generic `/~offline`
-page. Page HTML and data are never cached; offline workout data will be stored in IndexedDB (milestone 3).
+page. Page HTML and data are never cached. The one exception is `/workout`, a static page with no data in it, which
+is precached so a workout can reopen offline; its data comes from IndexedDB.
 Test PWA behaviour on a production build.
 
 ## Environment variables (`.env.example`)

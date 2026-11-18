@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card } from "@/components";
+import { Card } from "@/components/ui";
 import { addDays, localDate } from "@/lib/dates";
 import { isTestWeek, isValidDate, resolveDay, SESSION_LABELS, weekDates } from "@/lib/plan";
 import { finishedWorkouts, getOverrides, getPlanDays } from "@/lib/queries";
