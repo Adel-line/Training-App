@@ -4,11 +4,11 @@ Private, phone-first training app for one person (snowboarding, splitboarding, g
 Next.js + SQLite + Tailwind, installed on the phone's home screen as a PWA. It runs on your own computer;
 there is no login, no Supabase and no Vercel. Access is limited by the private network (Tailscale).
 
-Status: **milestone 1 (revised) of 8**: scaffold, local database, PWA shell.
+Status: **milestone 2 of 8** done: local database, default plan, Today and Week screens. (Milestone 1: PWA shell.)
 
 ## Requirements
 
-- Node.js **22.13 or newer** (uses the built-in `node:sqlite`; it prints an "experimental" notice, which is harmless).
+- Node.js **22.18 or newer** (uses the built-in `node:sqlite`; it prints an "experimental" notice, which is harmless).
 - A free [Tailscale](https://tailscale.com) account with the app on both your computer and your phone.
 
 ## Run it
@@ -20,7 +20,8 @@ npm run build
 npm start                      # http://localhost:3000
 ```
 
-Data lives in `data/training.db` (override with `DB_PATH`). Schema changes are SQL files in `migrations/`, applied
+The first start creates the database and loads the default plan once (`seed/seed.sql`). `npm run seed` re-adds any
+missing default rows later; it never overwrites your edits. Data lives in `data/training.db` (override with `DB_PATH`). Schema changes are SQL files in `migrations/`, applied
 automatically on start. **Back up by copying that one file** while the app is idle.
 
 ## Open it on your phone (Tailscale)

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getDb } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -13,6 +14,9 @@ export default function SettingsPage() {
         <p className="text-sm text-muted">Database</p>
         <p className="font-medium">Local SQLite · {row.n} migration(s) applied</p>
       </div>
+      <Link href="/settings/plan" className="tap flex items-center rounded-[var(--radius-card)] border border-line bg-surface p-4 font-semibold">
+        Edit weekly plan ›
+      </Link>
     </section>
   );
 }

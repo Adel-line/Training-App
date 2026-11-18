@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test --trace off",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "seed": "node scripts/seed.ts"
   },
   "dependencies": {
     "@serwist/turbopack": "^9.5.15",

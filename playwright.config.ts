@@ -15,7 +15,7 @@ export default defineConfig({
   },
   webServer: {
     // Production build: the service worker is disabled in `next dev`.
-    command: `npm run build && npx next start -p ${PORT}`,
+    command: `rm -f data/e2e.db* && npm run build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/today`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,

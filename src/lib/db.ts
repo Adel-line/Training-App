@@ -30,6 +30,26 @@ export function migrate(db: DatabaseSync, dir = path.join(process.cwd(), "migrat
   return applied;
 }
 
+/** Runs seed/seed.sql (idempotent, INSERT OR IGNORE only). */
+export function runSeed(db: DatabaseSync, file = path.join(process.cwd(), "seed", "seed.sql")): void {
+  db.exec("BEGIN");
+  try {
+    db.exec(readFileSync(file, "utf-8"));
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw new Error(`Seed failed: ${(err as Error).message}`);
+  }
+}
+
+/** Seeds a brand-new database once; later deletions of default rows are respected. */
+export function seedOnce(db: DatabaseSync): void {
+  const done = db.prepare("SELECT 1 FROM app_meta WHERE key = 'seeded'").get();
+  if (done) return;
+  runSeed(db);
+  db.prepare("INSERT INTO app_meta (key, value) VALUES ('seeded', datetime('now'))").run();
+}
+
 let instance: DatabaseSync | undefined;
 
 export function getDb(): DatabaseSync {
@@ -39,6 +59,7 @@ export function getDb(): DatabaseSync {
     const db = new DatabaseSync(file);
     db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
     migrate(db);
+    seedOnce(db);
     instance = db;
   }
   return instance;
